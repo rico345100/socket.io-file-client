@@ -2,6 +2,9 @@
 
 Socket.io-file-client is module for uploading file via Socket.io.
 
+## Examples
+
+You can found full source code here: [Example Page](https://github.com/rico345100/socket.io-file-example)
 
 ### Client side
 
