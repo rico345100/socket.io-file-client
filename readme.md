@@ -5,6 +5,7 @@ Socket.io-file-client is module for uploading file via Socket.io.
 ## Examples
 
 You can found full source code here: [Example Page](https://github.com/rico345100/socket.io-file-example)
+Or [Browserify Example](https://github.com/rico345100/socket.io-file-example-browserify)
 
 ### Client side
 
@@ -58,6 +59,32 @@ window.addEventListener('load', function() {
 		var file = document.getElementById('FileBox').files[0];
 		socketIOFile.upload(file);
 	});
+});
+```
+
+Socket.io-file-client also supports UMD, so you can use ES2016 modular syntax with browserify.
+```javascript
+import SocketIO from 'socket.io-client';
+import SocketIOFileClient from 'socket.io-file-client';
+
+var socket = SocketIO('http://localhost:3000');
+var socketIOFile = new SocketIOFileClient(socket);
+
+socketIOFile.on('start', function() {
+	console.log('File uploading staring...');
+});
+
+socketIOFile.on('stream', function(data) {
+	console.log('SocketIOFileClient: Client streaming... ' + data.uploaded + ' / ' + data.size);
+});
+
+socketIOFile.on('complete', function() {
+	console.log('File Uploaded Successfully!');
+});
+
+document.getElementById('UploadButton').addEventListener('click', function() {
+	var file = document.getElementById('FileBox').files[0];
+	socketIOFile.upload(file);
 });
 ```
 

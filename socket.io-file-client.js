@@ -1,14 +1,8 @@
 (function() {
-	window.addEventListener('load', function() {
-		if(!window.File || !window.FileReader) {
-			throw new Error('Your browser does not support FileReader API.');
-		}
-	});
-
 	var fileReader = new FileReader();
 	var CHUNK_SIZE = 524288;
 
-	window.SocketIOFileClient = function(socket) {
+	function SocketIOFileClient(socket) {
 		var self = this;
 		this.socket = socket;
 		this.ev = [];
@@ -40,6 +34,7 @@
 		});
 	}
 	SocketIOFileClient.prototype.upload = function(file) {
+		var self = this;
 		this.sendingFile = file;
 
 		if(!file) {
@@ -48,7 +43,7 @@
 		}
 
 		fileReader.onload = function(e) {
-			socket.emit('socket.io-file::stream', {
+			self.socket.emit('socket.io-file::stream', {
 				name: file.name,
 				data: e.target.result
 			});
@@ -90,4 +85,35 @@
 
 		return this;
 	};
+
+	// CommonJS
+	if (typeof exports === "object" && typeof module !== "undefined") {
+		module.exports = SocketIOFileClient;
+	}
+	// RequireJS
+	else if (typeof define === "function" && define.amd) {
+		define(['SocketIOFileClient'], SocketIOFileClient);
+	}
+	// <script>
+	else {
+		var g;
+
+		if (typeof window !== "undefined") {
+			g = window;
+		}
+		else if (typeof global !== "undefined") {
+			g = global;
+		}
+		else if (typeof self !== "undefined") {
+			g = self;
+		}
+		else {
+			// works providing we're not in "use strict";
+			// needed for Java 8 Nashorn
+			// see https://github.com/facebook/react/issues/3037
+			g = this;
+		}
+
+		g.SocketIOFileClient = SocketIOFileClient;
+	}
 })();
