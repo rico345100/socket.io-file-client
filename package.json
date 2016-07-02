@@ -1,0 +1,11 @@
+{
+  "name": "socket.io-file-client",
+  "version": "1.0.0",
+  "description": "Client module for Socket.io-file",
+  "main": "socket.io-file-client.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": ".modernator",
+  "license": "MIT"
+}
