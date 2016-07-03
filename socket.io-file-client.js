@@ -61,6 +61,10 @@
 				self.emit('error', {
 					message: "Type must be one of these: " + types.toString()
 				});
+				
+				self.socket.emit('socket.io-file::abort', {
+					name: file.name
+				});
 			}
 			else {
 				self.socket.emit('socket.io-file::stream', {

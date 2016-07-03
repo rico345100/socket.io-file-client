@@ -1,6 +1,6 @@
 {
   "name": "socket.io-file-client",
-  "version": "1.0.5",
+  "version": "1.0.52",
   "description": "Client module for Socket.io-file",
   "main": "socket.io-file-client.js",
   "scripts": {

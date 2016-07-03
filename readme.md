@@ -101,7 +101,7 @@ start uploading to server. After upload begins, these events will triggered:
 * stream: fires on chunk of data sent. This event has argument for uploading information.
 * abort: fires on aborting upload
 * error: fires on error
-* complete: fires on complete. This event has argument for uploaded file info: { path: 'UPLOADED_PATH' }
+* complete: fires on complete. This event has argument for uploaded file info: { path: 'UPLOADED_PATH', name: 'FILE_NAME' }
 
 stream event has one argument which contains:
 * Object stream: Internally, this module merge the data from client until file is all uploaded. This stream is part of file that client keep sending it.
