@@ -32,21 +32,42 @@
 			self.emit('complete', data);
 			self.sendingFile = undefined;
 		});
+		this.socket.on('socket.io-file::abort', function(data) {
+			self.emit('abort', data);
+		});
 	}
-	SocketIOFileClient.prototype.upload = function(file) {
+	SocketIOFileClient.prototype.upload = function(file, options) {
 		var self = this;
-		this.sendingFile = file;
+		options = options || {};
+		var types = options.types || [];
 
 		if(!file) {
-			console.warn('SocketIOFileClient: No file to send.');
-			return false;
+			throw new Error('No file');
 		}
 
+		this.sendingFile = file;
+
 		fileReader.onload = function(e) {
-			self.socket.emit('socket.io-file::stream', {
-				name: file.name,
-				data: e.target.result
-			});
+			// check file type
+			var found = false;
+			for(var i = 0; i < types.length; i++) {
+				if(file.type === types[i]) {
+					found = true;
+					break;
+				}
+			}
+
+			if(types.length > 0 && !found) {
+				self.emit('error', {
+					message: "Type must be one of these: " + types.toString()
+				});
+			}
+			else {
+				self.socket.emit('socket.io-file::stream', {
+					name: file.name,
+					data: e.target.result
+				});
+			}
 		};
 
 		this.socket.emit('socket.io-file::start', {
@@ -84,6 +105,11 @@
 		}
 
 		return this;
+	};
+	SocketIOFileClient.prototype.abort = function() {
+		this.socket.emit('socket.io-file::abort', {
+			name: this.sendingFile.name
+		});
 	};
 
 	// CommonJS

@@ -95,10 +95,12 @@ document.getElementById('UploadButton').addEventListener('click', function() {
 Create new SocketIOFileClient object. This object automatically handles all file uploads from client via Socket.io.
 
 
-### SocketIOFileClient.upload(file)
+### SocketIOFileClient.upload(file, options)
 start uploading to server. After upload begins, these events will triggered:
 * start: fires on start
 * stream: fires on chunk of data sent. This event has argument for uploading information.
+* abort: fires on aborting upload
+* error: fires on error
 * complete: fires on complete. This event has argument for uploaded file info: { path: 'UPLOADED_PATH' }
 
 stream event has one argument which contains:
@@ -106,6 +108,12 @@ stream event has one argument which contains:
 * Number size: Total file size.
 * Number uploaded: Amount of uploaded.
 * Number percent: Percentage of how much uploaded
+
+options can be:
+* Array types: Set the extensions. You can specify the mime types. Client will not sent a file if type is invalid. 
+
+### SocketIOFileClient.abort()
+Abort upload immediately. Server automatically remove uploaded file.
 
 ### SocketIOFileClient.on(String evName, Function fn)
 Add event handler.
