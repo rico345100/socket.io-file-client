@@ -29,7 +29,7 @@
 			fileReader.readAsBinaryString(newFile);
 		});
 		this.socket.on('socket.io-file::complete', function(data) {
-			self.emit('complete');
+			self.emit('complete', data);
 			self.sendingFile = undefined;
 		});
 	}

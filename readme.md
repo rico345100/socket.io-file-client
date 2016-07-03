@@ -99,7 +99,7 @@ Create new SocketIOFileClient object. This object automatically handles all file
 start uploading to server. After upload begins, these events will triggered:
 * start: fires on start
 * stream: fires on chunk of data sent. This event has argument for uploading information.
-* complete: fires on complete
+* complete: fires on complete. This event has argument for uploaded file info: { path: 'UPLOADED_PATH' }
 
 stream event has one argument which contains:
 * Object stream: Internally, this module merge the data from client until file is all uploaded. This stream is part of file that client keep sending it.
