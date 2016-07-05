@@ -35,14 +35,20 @@
 		this.socket.on('socket.io-file::abort', function(data) {
 			self.emit('abort', data);
 		});
+		this.socket.on('socket.io-file::error', function(data) {
+			self.emit('error', data);
+		});
 	}
 	SocketIOFileClient.prototype.upload = function(file, options) {
 		var self = this;
 		options = options || {};
 		var types = options.types || [];
+		var uploadTo = options.to || '';
 
 		if(!file) {
-			throw new Error('No file');
+			return self.emit('error', {
+				message: "No file"
+			});
 		}
 
 		this.sendingFile = file;
@@ -76,7 +82,8 @@
 
 		this.socket.emit('socket.io-file::start', {
 			name: file.name,
-			size: this.sendingFile.size
+			size: this.sendingFile.size,
+			uploadTo: uploadTo
 		});
 
 		this.emit('start');

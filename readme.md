@@ -110,7 +110,8 @@ stream event has one argument which contains:
 * Number percent: Percentage of how much uploaded
 
 options can be:
-* Array types: Set the extensions. You can specify the mime types. Client will not sent a file if type is invalid. 
+* Array types: Set the extensions. You can specify the mime types. Client will not sent a file if type is invalid.
+* to: Choose the path. If SocketIOFile server provide multiple path for upload, Client can choose which want to upload. If path is multiple, Client must be select which path to use, otherwise server refuse to upload.
 
 ### SocketIOFileClient.abort()
 Abort upload immediately. Server automatically remove uploaded file.
