@@ -1,5 +1,4 @@
 (function() {
-	var fileReader = new FileReader();
 	var CHUNK_SIZE = 524288;
 
 	function SocketIOFileClient(socket) {
@@ -7,6 +6,7 @@
 		this.socket = socket;
 		this.ev = [];
 		this.sendingFile = undefined;
+		this.fileReader = new FileReader();
 		
 		this.socket.on('socket.io-file::stream', function(data) {
 			self.emit('stream', data);
@@ -26,7 +26,7 @@
 				newFile = self.sendingFile.mozSlice(stream, stream + Math.min(524288, (self.sendingFile.size - stream)));
 			}
 
-			fileReader.readAsBinaryString(newFile);
+			self.fileReader.readAsBinaryString(newFile);
 		});
 		this.socket.on('socket.io-file::complete', function(data) {
 			self.emit('complete', data);
@@ -53,7 +53,7 @@
 
 		this.sendingFile = file;
 
-		fileReader.onload = function(e) {
+		this.fileReader.onload = function(e) {
 			// check file type
 			var found = false;
 			for(var i = 0; i < types.length; i++) {
@@ -97,12 +97,22 @@
 		return this;
 	};
 	SocketIOFileClient.prototype.off = function(evName, fn) {
-		var evList = this.ev[evName] || [];
+		if(typeof evName === 'undefined') {
+			this.ev = [];
+		}
+		else if(typeof fn === 'undefined') {
+			if(this.ev[evName]) {
+				delete this.ev[evName]; 
+			}
+		}
+		else {
+			var evList = this.ev[evName] || [];
 
-		for(var i = 0; i < evList.length; i++) {
-			if(evList[i] === fn) {
-				evList = evList.splice(i, 1);
-				break;
+			for(var i = 0; i < evList.length; i++) {
+				if(evList[i] === fn) {
+					evList = evList.splice(i, 1);
+					break;
+				}
 			}
 		}
 
@@ -121,6 +131,15 @@
 		this.socket.emit('socket.io-file::abort', {
 			name: this.sendingFile.name
 		});
+	};
+	SocketIOFileClient.prototype.destroy = function() {
+		this.off();	// remove all listeners
+		this.socket.off('socket.io-file::start');
+		this.socket.off('socket.io-file::stream');
+		this.socket.off('socket.io-file::abort');
+		this.socket.off('socket.io-file::complete');
+		this.socket.off('socket.io-file::error');
+		this.fileReader = null;
 	};
 
 	// CommonJS

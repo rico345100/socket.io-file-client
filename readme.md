@@ -107,7 +107,7 @@ stream event has one argument which contains:
 * Object stream: Internally, this module merge the data from client until file is all uploaded. This stream is part of file that client keep sending it.
 * Number size: Total file size.
 * Number uploaded: Amount of uploaded.
-* Number percent: Percentage of how much uploaded
+* Number percent: Percentage of upload progress
 
 options can be:
 * Array types: Set the extensions. You can specify the mime types. Client will not sent a file if type is invalid.
@@ -120,10 +120,13 @@ Abort upload immediately. Server automatically remove uploaded file.
 Add event handler.
 
 ### SocketIOFileClient.off(String evName, Function fn)
-Remove event handler.
+Remove event handler. If call this method with no arguments, remove all listeners. If fn argument is empty, remove all handlers on 'evName' event.
 
 ### SocketIOFileClient.emit(String evName)
 Emit specified event.
+
+### SocketIOFileClient.destroy()
+This method remove all SocketIOFile module related resources. Use this when remove SocketIOFileClient object. This method also remove all listeners automatically.
 
 
 
