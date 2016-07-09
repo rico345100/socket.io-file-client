@@ -1,14 +1,28 @@
 (function() {
 	var CHUNK_SIZE = 524288;
+	var instanceCnt = 0;
 
 	function SocketIOFileClient(socket) {
 		var self = this;
+		var id = instanceCnt++;	// private
 		this.socket = socket;
 		this.ev = [];
 		this.sendingFile = undefined;
 		this.fileReader = new FileReader();
+		this.sync = false;
+
+		this.getId = function() {
+			return id;
+		};
+
+		this.socket.once('socket.io-file::sync', function(data) {
+			this.sync = true;
+		});
+		this.socket.emit('socket.io-file::sync', {
+			id: id
+		});
 		
-		this.socket.on('socket.io-file::stream', function(data) {
+		this.socket.on('socket.io-file::' + id + '::stream', function(data) {
 			self.emit('stream', data);
 
 			if(data.uploaded >= self.sendingFile.size) return;
@@ -28,22 +42,24 @@
 
 			self.fileReader.readAsBinaryString(newFile);
 		});
-		this.socket.on('socket.io-file::complete', function(data) {
+		this.socket.on('socket.io-file::' + id + '::complete', function(data) {
 			self.emit('complete', data);
 			self.sendingFile = undefined;
 		});
-		this.socket.on('socket.io-file::abort', function(data) {
+		this.socket.on('socket.io-file::' + id + '::abort', function(data) {
 			self.emit('abort', data);
 		});
-		this.socket.on('socket.io-file::error', function(data) {
+		this.socket.on('socket.io-file::' + id + '::error', function(data) {
 			self.emit('error', data);
 		});
 	}
 	SocketIOFileClient.prototype.upload = function(file, options) {
 		var self = this;
+		var id = this.getId();
 		options = options || {};
 		var types = options.types || [];
 		var uploadTo = options.to || '';
+		var uploadData = options.data || {};
 
 		if(!file) {
 			return self.emit('error', {
@@ -69,11 +85,13 @@
 				});
 				
 				self.socket.emit('socket.io-file::abort', {
+					id: self.getId(),
 					name: file.name
 				});
 			}
 			else {
 				self.socket.emit('socket.io-file::stream', {
+					id: self.getId(),
 					name: file.name,
 					data: e.target.result
 				});
@@ -81,9 +99,11 @@
 		};
 
 		this.socket.emit('socket.io-file::start', {
+			id: self.getId(),
 			name: file.name,
 			size: this.sendingFile.size,
-			uploadTo: uploadTo
+			uploadTo: uploadTo,
+			data: uploadData
 		});
 
 		this.emit('start');

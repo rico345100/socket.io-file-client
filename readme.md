@@ -101,7 +101,7 @@ start uploading to server. After upload begins, these events will triggered:
 * stream: fires on chunk of data sent. This event has argument for uploading information.
 * abort: fires on aborting upload
 * error: fires on error
-* complete: fires on complete. This event has argument for uploaded file info: { path: 'UPLOADED_PATH', name: 'FILE_NAME' }
+* complete: fires on complete. This event has argument for uploaded file info: { path: 'UPLOADED_PATH', name: 'FILE_NAME', uploadTo: 'upload option "to"' }
 
 stream event has one argument which contains:
 * Object stream: Internally, this module merge the data from client until file is all uploaded. This stream is part of file that client keep sending it.
@@ -112,6 +112,7 @@ stream event has one argument which contains:
 options can be:
 * Array types: Set the extensions. You can specify the mime types. Client will not sent a file if type is invalid.
 * to: Choose the path. If SocketIOFile server provide multiple path for upload, Client can choose which want to upload. If path is multiple, Client must be select which path to use, otherwise server refuse to upload.
+* Object data: Custom data want to send with file.
 
 ### SocketIOFileClient.abort()
 Abort upload immediately. Server automatically remove uploaded file.
