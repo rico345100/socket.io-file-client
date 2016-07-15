@@ -148,11 +148,15 @@
 		return this;
 	};
 	SocketIOFileClient.prototype.abort = function() {
-		this.socket.emit('socket.io-file::abort', {
-			name: this.sendingFile.name
-		});
+		if(this.sendingFile) {
+			this.socket.emit('socket.io-file::abort', {
+				name: this.sendingFile.name
+			});
+		}
 	};
 	SocketIOFileClient.prototype.destroy = function() {
+		this.abort();
+		
 		this.off();	// remove all listeners
 		this.socket.off('socket.io-file::start');
 		this.socket.off('socket.io-file::stream');
