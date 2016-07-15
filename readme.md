@@ -114,8 +114,11 @@ options can be:
 * to: Choose the path. If SocketIOFile server provide multiple path for upload, Client can choose which want to upload. If path is multiple, Client must be select which path to use, otherwise server refuse to upload.
 * Object data: Custom data want to send with file.
 
-### SocketIOFileClient.abort()
-Abort upload immediately. Server automatically remove uploaded file.
+upload method returns ID of current uploading sequence. You can use this id to manual abort with abort method.
+Since 1.0.8, you can now upload multiple files at once.
+
+### SocketIOFileClient.abort([Number id])
+Abort upload immediately. Server automatically remove uploaded file. If id is not set, abort all uploads.
 
 ### SocketIOFileClient.on(String evName, Function fn)
 Add event handler.

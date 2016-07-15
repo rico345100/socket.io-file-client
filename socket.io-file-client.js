@@ -5,14 +5,18 @@
 	function SocketIOFileClient(socket) {
 		var self = this;
 		var id = instanceCnt++;	// private
+		var uploadId = 0;		// private
 		this.socket = socket;
 		this.ev = [];
-		this.sendingFile = undefined;
-		this.fileReader = new FileReader();
+		this.sendingFiles = [];
+		this.fileReaders = [];
 		this.sync = false;
 
 		this.getId = function() {
 			return id;
+		};
+		this.getUploadId = function() {
+			return 'U' + (uploadId++);
 		};
 
 		this.socket.once('socket.io-file::sync', function(data) {
@@ -22,30 +26,6 @@
 			id: id
 		});
 		
-		this.socket.on('socket.io-file::' + id + '::stream', function(data) {
-			self.emit('stream', data);
-
-			if(data.uploaded >= self.sendingFile.size) return;
-
-			var stream = data.stream * CHUNK_SIZE;	// The Next block's starting position
-			var newFile;		// The variable that will hold the new Block of data
-
-			if(self.sendingFile.slice) {
-				newFile = self.sendingFile.slice(stream, stream + Math.min(524288, (self.sendingFile.size - stream)));
-			}
-			else if(self.sendingFile.webkitSlice) {
-				newFile = self.sendingFile.webkitSlice(stream, stream + Math.min(524288, (self.sendingFile.size - stream)));
-			}
-			else {
-				newFile = self.sendingFile.mozSlice(stream, stream + Math.min(524288, (self.sendingFile.size - stream)));
-			}
-
-			self.fileReader.readAsBinaryString(newFile);
-		});
-		this.socket.on('socket.io-file::' + id + '::complete', function(data) {
-			self.emit('complete', data);
-			self.sendingFile = undefined;
-		});
 		this.socket.on('socket.io-file::' + id + '::abort', function(data) {
 			self.emit('abort', data);
 		});
@@ -56,6 +36,8 @@
 	SocketIOFileClient.prototype.upload = function(file, options) {
 		var self = this;
 		var id = this.getId();
+		var uploadId = this.getUploadId();
+
 		options = options || {};
 		var types = options.types || [];
 		var uploadTo = options.to || '';
@@ -67,9 +49,12 @@
 			});
 		}
 
-		this.sendingFile = file;
+		this.sendingFiles[uploadId] = file;
 
-		this.fileReader.onload = function(e) {
+		this.fileReaders[uploadId] = new FileReader();
+		this.fileReaders[uploadId].onload = function(e) {
+			var file = self.sendingFiles[uploadId];
+
 			// check file type
 			var found = false;
 			for(var i = 0; i < types.length; i++) {
@@ -91,7 +76,8 @@
 			}
 			else {
 				self.socket.emit('socket.io-file::stream', {
-					id: self.getId(),
+					id: id,
+					uploadId: uploadId, 
 					name: file.name,
 					data: e.target.result
 				});
@@ -99,14 +85,52 @@
 		};
 
 		this.socket.emit('socket.io-file::start', {
-			id: self.getId(),
+			id: id,
+			uploadId: uploadId,
 			name: file.name,
-			size: this.sendingFile.size,
+			size: this.sendingFiles[uploadId].size,
 			uploadTo: uploadTo,
 			data: uploadData
 		});
 
 		this.emit('start');
+
+		this.socket.on('socket.io-file::' + id + '::' + uploadId + '::stream', function(data) {
+			let id = data.id;
+			let uploadId = data.uploadId;
+
+			data.id = id;
+			data.uploadId = uploadId;
+			
+			self.emit('stream', data);
+
+			if(data.uploaded >= self.sendingFiles[uploadId].size) return;
+
+			var stream = data.stream * CHUNK_SIZE;	// The Next block's starting position
+			var newFile;		// The variable that will hold the new Block of data
+
+			if(self.sendingFiles[uploadId].slice) {
+				newFile = self.sendingFiles[uploadId].slice(stream, stream + Math.min(524288, (self.sendingFiles[uploadId].size - stream)));
+			}
+			else if(self.sendingFiles[uploadIdid].webkitSlice) {
+				newFile = self.sendingFiles[uploadId].webkitSlice(stream, stream + Math.min(524288, (self.sendingFiles[uploadId].size - stream)));
+			}
+			else {
+				newFile = self.sendingFiles[uploadId].mozSlice(stream, stream + Math.min(524288, (self.sendingFiles[uploadId].size - stream)));
+			}
+
+			self.fileReaders[uploadId].readAsBinaryString(newFile);
+		});
+		this.socket.on('socket.io-file::' + id + '::' + uploadId + '::complete', function(data) {
+			let id = data.id;
+			let uploadId = data.uploadId;
+
+			self.emit('complete', data);
+			delete self.fileReaders[uploadId];
+			delete self.sendingFiles[uploadId];
+		});
+
+		return uploadId;
 	};
 	SocketIOFileClient.prototype.on = function(evName, fn) {
 		if(!this.ev[evName]) {
@@ -147,11 +171,23 @@
 
 		return this;
 	};
-	SocketIOFileClient.prototype.abort = function() {
-		if(this.sendingFile) {
-			this.socket.emit('socket.io-file::abort', {
-				name: this.sendingFile.name
-			});
+	SocketIOFileClient.prototype.abort = function(id) {
+		// abort all
+		if(!id) {
+			for(var i = 0; i < this.sendingFiles.length; i++) {
+				if(this.sendingFiles[i]) {
+					this.socket.emit('socket.io-file::abort', {
+						name: this.sendingFiles[i].name
+					});
+				}
+			}
+		}
+		else {
+			if(this.sendingFiles[id]) {
+				this.socket.emit('socket.io-file::abort', {
+					name: this.sendingFiles[id].name
+				});
+			}
 		}
 	};
 	SocketIOFileClient.prototype.destroy = function() {
@@ -163,7 +199,8 @@
 		this.socket.off('socket.io-file::abort');
 		this.socket.off('socket.io-file::complete');
 		this.socket.off('socket.io-file::error');
-		this.fileReader = null;
+		this.fileReaders = [];
+		this.sendingFiles = [];
 	};
 
 	// CommonJS
