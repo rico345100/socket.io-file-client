@@ -1,4 +1,5 @@
 (function() {
+	var self = this;
 	var CHUNK_SIZE = 524288;
 	var instanceCnt = 0;
 
@@ -174,10 +175,10 @@
 	SocketIOFileClient.prototype.abort = function(id) {
 		// abort all
 		if(!id) {
-			for(var i = 0; i < this.sendingFiles.length; i++) {
-				if(this.sendingFiles[i]) {
+			for(var key in this.sendingFiles) {
+				if(this.sendingFiles[key]) {
 					this.socket.emit('socket.io-file::abort', {
-						name: this.sendingFiles[i].name
+						uploadId: key
 					});
 				}
 			}
@@ -185,7 +186,7 @@
 		else {
 			if(this.sendingFiles[id]) {
 				this.socket.emit('socket.io-file::abort', {
-					name: this.sendingFiles[id].name
+					uploadId: id
 				});
 			}
 		}
