@@ -1,141 +1,181 @@
 # Socket.io-file-client
-
 Socket.io-file-client is module for uploading file via Socket.io.
 
-## Examples
 
+## Major Changes from 1.x to 2.x
+Socket.io-file 1.x used Binary String to send files. Binary String is little bit slower than direct Binary writes, and also server used fs.write, not writable stream.
+Recently, FileReader.readAsBinaryString() was deprecated, so I updated Socket.io-file to use ArrayBuffer(Object for manipulate Binary Data directly from JavaScript) instead of Binary String.
+
+Also, newer version has much more functionalities, like Server-side MIME type checking, File size limitations.
+Even you can configure the size of each transmission(chunk) any value you want, higher value gives you faster upload.
+
+
+## Features
+- Simple is the best.
+- File uploads
+- Highly improved performance
+- Using File Streams to write faster, efficient.
+- Checking mime, limit file size
+- Multiple file uploads
+
+
+## Examples
 You can found full source code here: [Example Page](https://github.com/rico345100/socket.io-file-example)
 Or [Browserify Example](https://github.com/rico345100/socket.io-file-example-browserify)
 
 ### Client side
 
-#### HTML
 ```html
 <html>
 <head>
 	<meta charset="UTF-8">
-	<title>Socket File Upload</title>
+	<title>Socket.io-file 2.x File Upload Example</title>
 </head>
 <body>
-	<div id="UploadBox">
-		<h2>File Uploader</h2>
-		<span id="UploadArea">
-			<label for="FileBox">Choose A File:</label>
-			<input type="file" id="FileBox" />
-			<br />
+	<h1>Socket.io-file 2.x File Upload Example</h1>
+	<p>Select file and click upload button to upload.</p>
+	<p>Multiple upload also supports.</p>
 
-			<button type="button" id="UploadButton">Upload</button>
-		</span>
-	</div>
+	<form id="form">
+		<input type="file" id="file" multiple />
+		<input type="submit" value="Upload" />
+	</form>
 
-	<script src="/socket.io.js"></script>
-	<script src="/socket.io-file-client.js"></script>
-	<script src="/alter.js"></script>
+	<script src="socket.io.js"></script>
+	<script src="socket.io-file-client.js"></script>
+	<script src="app.js"></script>
 </body>
 </html>
 ```
 
-#### JavaScript
 ```javascript
 var socket = io('http://localhost:3000');
+var uploader = new SocketIOFileClient(socket);
+var form = document.getElementById('form');
 
-window.addEventListener('load', function() {
-	var socketIOFile = new SocketIOFileClient(socket);
-
-	socketIOFile.on('start', function() {
-		console.log('File uploading staring...');
-	});
-
-	socketIOFile.on('stream', function(data) {
-		//console.log('SocketIOFileClient: Client streaming... ' + (Math.round(data.percent * 100)/100) + '%');
-		console.log('SocketIOFileClient: Client streaming... ' + data.uploaded + ' / ' + data.size);
-	});
-
-	socketIOFile.on('complete', function() {
-		console.log('File Uploaded Successfully!');
-	});
-
-	document.getElementById('UploadButton').addEventListener('click', function() {
-		var file = document.getElementById('FileBox').files[0];
-		socketIOFile.upload(file);
-	});
+uploader.on('start', function(fileInfo) {
+	console.log('Start uploading', fileInfo);
 });
+uploader.on('stream', function(fileInfo) {
+	console.log('Streaming... sent ' + fileInfo.sent + ' bytes.');
+});
+uploader.on('complete', function(fileInfo) {
+	console.log('Upload Complete', fileInfo);
+});
+uploader.on('error', function(err) {
+	console.log('Error!', err);
+});
+uploader.on('abort', function(fileInfo) {
+	console.log('Aborted: ', fileInfo);
+});
+
+form.onsubmit = function(ev) {
+	ev.preventDefault();
+	
+	var fileEl = document.getElementById('file');
+	var uploadIds = uploader.upload(fileEl);
+};
 ```
 
-Socket.io-file-client also supports UMD, so you can use ES2016 modular syntax with browserify.
+Also Socket.io-file-client supports UMD, you can load from CommonJS require() or ES6 import:
+
 ```javascript
 import SocketIO from 'socket.io-client';
 import SocketIOFileClient from 'socket.io-file-client';
 
 var socket = SocketIO('http://localhost:3000');
-var socketIOFile = new SocketIOFileClient(socket);
+var uploader = new SocketIOFileClient(socket);
+var form = document.getElementById('form');
 
-socketIOFile.on('start', function() {
-	console.log('File uploading staring...');
+uploader.on('start', (fileInfo) => {
+	console.log('Start uploading', fileInfo);
+});
+uploader.on('stream', (fileInfo) => {
+	console.log('Streaming... sent ' + fileInfo.sent + ' bytes.');
+});
+uploader.on('complete', (fileInfo) => {
+	console.log('Upload Complete', fileInfo);
+});
+uploader.on('error', (err) => {
+	console.log('Error!', err);
+});
+uploader.on('abort', (fileInfo) => {
+	console.log('Aborted: ', fileInfo);
 });
 
-socketIOFile.on('stream', function(data) {
-	console.log('SocketIOFileClient: Client streaming... ' + data.uploaded + ' / ' + data.size);
-});
-
-socketIOFile.on('complete', function() {
-	console.log('File Uploaded Successfully!');
-});
-
-document.getElementById('UploadButton').addEventListener('click', function() {
-	var file = document.getElementById('FileBox').files[0];
-	socketIOFile.upload(file);
-});
+form.onsubmit = function(ev) {
+	ev.preventDefault();
+	
+	var fileEl = document.getElementById('file');
+	var uploadIds = uploader.upload(fileEl);
+};
 ```
 
 
 ## API
-### constructor SocketIOFileClient(socket)
+### constructor SocketIOFileClient(io socket, Object options)
+Create new SocketIOFileClient object.
 
-Create new SocketIOFileClient object. This object automatically handles all file uploads from client via Socket.io.
+### Array SocketIOFileClient.upload(HTMLElement fileEl, Object options)
+Upload file(s). First argument must be <input type="file" />, other wise refuse uploads. If it has multiple files(with multiple attribute), it uploads all at once.
+Returns array that contains upload ids as values.
+Available options are:
+- String to: If server has multiple upload directories, client must be set the directory where to upload.
+
+### SocketIOFileClient SocketIOFileClient.on(String evName, function fn)
+Attach event handler to SocketIOFileClient. Possible events are described later part.
+
+### SocketIOFileClient SocketIOFileClient.off(String evName[, function fn])
+Detach event handler from SocketIOFileClient. If function is undefined, removes all event handlers attached on that event.
+
+### SocketIOFileClient SocketIOFileClient.emit(String evName, Object args)
+Trigger the event.
+
+### void SocketIOFileClient.abort(String id)
+Abort upload of specified id.
+
+### void SocketIOFileClient.destroy(void)
+Destroy all resources about SocketIOFileClient. Use this method for saving more resources from client side. After use this, you can't upload file anymore.
+
+### void SocketIOFileClient.getUploadInfo(void) 
+Get array of currently uploading files. Keys are upload id, values are object that contains information of uploading files.
 
 
-### SocketIOFileClient.upload(file, options)
-start uploading to server. After upload begins, these events will triggered:
-* start: fires on start
-* stream: fires on chunk of data sent. This event has argument for uploading information.
-* abort: fires on aborting upload
-* error: fires on error
-* complete: fires on complete. This event has argument for uploaded file info: { path: 'UPLOADED_PATH', name: 'FILE_NAME', uploadTo: 'upload option "to"' }
+### Events
+SocketIOFile provides these events. Some of property is slight different than servers, like wrote -> sent.
 
-stream event has one argument which contains:
-* Object stream: Internally, this module merge the data from client until file is all uploaded. This stream is part of file that client keep sending it.
-* Number size: Total file size.
-* Number uploaded: Amount of uploaded.
-* Number percent: Percentage of upload progress
+#### start
+Fired on starting file upload. This means server grant your uploading request and create empty file to begin writes. Argument has:
+- String name: Name of the file
+- Number size: Size of the file(bytes)
+- String uploadTo: Directory that where to writing.
 
-options can be:
-* Array types: Set the extensions. You can specify the mime types. Client will not sent a file if type is invalid.
-* to: Choose the path. If SocketIOFile server provide multiple path for upload, Client can choose which want to upload. If path is multiple, Client must be select which path to use, otherwise server refuse to upload.
-* Object data: Custom data want to send with file.
+#### stream
+Fired on getting chunks from client. Argument has:
+- String name
+- String uploadTo
+- Number size
+- Number sent: Bytes of sent
 
-upload method returns ID of current uploading sequence. You can use this id to manual abort with abort method.
-Since 1.0.8, you can now upload multiple files at once.
+#### complete
+Fired on upload complete. Argument has:
+- String name
+- String uploadDir
+- String mime: MIME type that server recognized.
+- Number size
+- Number wrote
+- Number estimated: Estimated uploading time as ms.
 
-### SocketIOFileClient.abort([Number id])
-Abort upload immediately. Server automatically remove uploaded file. If id is not set, abort all uploads.
+#### abort
+Fired on abort uploading.
+- String name
+- String uploadTo
+- Number size
+- Number sent
 
-### SocketIOFileClient.on(String evName, Function fn)
-Add event handler.
-
-### SocketIOFileClient.off(String evName, Function fn)
-Remove event handler. If call this method with no arguments, remove all listeners. If fn argument is empty, remove all handlers on 'evName' event.
-
-### SocketIOFileClient.emit(String evName)
-Emit specified event.
-
-### SocketIOFileClient.destroy()
-This method remove all SocketIOFile module related resources. Use this when remove SocketIOFileClient object. This method also remove all listeners automatically.
-
+#### error
+Fired on got an error. Passes Error object. 
 
 
 ## Browser Supports
-This module uses FileReader API, so latest browser is required.
-
-
-Please check the Server side module too. Link: [socket.io-file](https://github.com/rico345100/socket.io-file)
+This module uses FileReader API with ArrayBuffer, so make sure your browser support it.

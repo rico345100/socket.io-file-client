@@ -1,11 +1,23 @@
 {
   "name": "socket.io-file-client",
-  "version": "1.0.86",
+  "version": "2.0.0",
   "description": "Client module for Socket.io-file",
   "main": "socket.io-file-client.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/rico345100/socket.io-file-client"
+  },
+  "keywords": [
+    "WebSocket",
+    "Socket.io",
+    "binary",
+    "arraybuffer",
+    "file",
+    "upload"
+  ],
   "author": ".modernator",
   "license": "MIT"
 }

@@ -1,137 +1,179 @@
+"use strict";
 (function() {
-	var self = this;
-	var CHUNK_SIZE = 524288;
-	var instanceCnt = 0;
 
-	function SocketIOFileClient(socket) {
-		var self = this;
-		var id = instanceCnt++;	// private
-		var uploadId = 0;		// private
-		this.socket = socket;
-		this.ev = [];
-		this.sendingFiles = [];
-		this.fileReaders = [];
-		this.sync = false;
-
-		this.getId = function() {
-			return id;
-		};
-		this.getUploadId = function() {
-			return 'U' + (uploadId++);
-		};
-
-		this.socket.once('socket.io-file::sync', function(data) {
-			this.sync = true;
-		});
-		this.socket.emit('socket.io-file::sync', {
-			id: id
-		});
-		
-		this.socket.on('socket.io-file::' + id + '::abort', function(data) {
-			self.emit('abort', data);
-		});
-		this.socket.on('socket.io-file::' + id + '::error', function(data) {
-			self.emit('error', data);
-		});
+	var instanceId = 0;
+	function getInstanceId() {
+		return instanceId++;
 	}
-	SocketIOFileClient.prototype.upload = function(file, options) {
-		var self = this;
-		var id = this.getId();
-		var uploadId = this.getUploadId();
-
+	// note that this function invoked from call/apply, which has "this" binded	
+	function _upload(file, options) {
 		options = options || {};
-		var types = options.types || [];
-		var uploadTo = options.to || '';
-		var uploadData = options.data || {};
 
-		if(!file) {
-			return self.emit('error', {
-				message: "No file"
-			});
-		}
+		var self = this;
+		var socket = this.socket;
+		var chunkSize = this.chunkSize;
+		var transmissionDelay = this.transmissionDelay;
+		var uploadId = file.uploadId;
+		var uploadTo = options.uploadTo || '';
+		var fileInfo = {
+			id: uploadId,
+			name: file.name,
+			size: file.size,
+			chunkSize: chunkSize,
+			sent: 0
+		};		
 
-		this.sendingFiles[uploadId] = file;
+		uploadTo && (fileInfo.uploadTo = uploadTo);
 
-		this.fileReaders[uploadId] = new FileReader();
-		this.fileReaders[uploadId].onload = function(e) {
-			var file = self.sendingFiles[uploadId];
+		// read file
+		var fileReader = new FileReader();
+		fileReader.onloadend = function() {
+			var buffer = fileReader.result;
 
-			// check file type
-			var found = false;
-			for(var i = 0; i < types.length; i++) {
-				if(file.type === types[i]) {
-					found = true;
-					break;
+			// check file mime type if exists
+			if(self.accepts && self.accepts.length > 0) {
+				var found = false;
+
+				for(var i = 0; i < self.accepts.length; i++) {
+					var accept = self.accepts[i];
+
+					if(file.type === accept) {
+						found = true;
+						break;
+					}
+				}
+
+				if(!found) {
+					return self.emit('error', new Error('Not Acceptable file type ' + file.type + ' of ' + file.name + '. Type must be one of these: ' + self.accepts.join(', ')));
 				}
 			}
 
-			if(types.length > 0 && !found) {
-				self.emit('error', {
-					message: "Type must be one of these: " + types.toString()
+			// check file size
+			if(self.maxFileSize && self.maxFileSize > 0) {
+				if(file.size > +self.maxFileSize) {
+					return self.emit('error', new Error('Max Uploading File size must be under ' + self.maxFileSize + ' byte(s).'));
+				}
+			}
+
+			// put into uploadingFiles list
+			self.uploadingFiles[uploadId] = fileInfo;
+
+			// request the server to make a file
+			self.emit('start', { 
+				name: fileInfo.name, 
+				size: fileInfo.size,
+				uploadTo: uploadTo 
+			});
+			socket.emit('socket.io-file::createFile', fileInfo);
+
+			function sendChunk() {
+				if(fileInfo.aborted) {
+					return;
+				}
+
+				if(fileInfo.sent >= buffer.byteLength) {
+					socket.emit('socket.io-file::done::' + uploadId);
+					return;
+				}
+
+				var chunk = buffer.slice(fileInfo.sent, fileInfo.sent + chunkSize);
+
+				self.emit('stream', { 
+					name: fileInfo.name, 
+					size: fileInfo.size, 
+					sent: fileInfo.sent,
+					uploadTo: uploadTo 
 				});
+				socket.once('socket.io-file::request::' + uploadId, sendChunk);
+				socket.emit('socket.io-file::stream::' + uploadId, chunk);
+
+				fileInfo.sent += chunk.byteLength;
+				self.uploadingFiles[uploadId] = fileInfo;
+			}
+			socket.once('socket.io-file::request::' + uploadId, sendChunk);
+			socket.on('socket.io-file::complete::' + uploadId, function(info) {
+				self.emit('complete', info);
 				
-				self.socket.emit('socket.io-file::abort', {
-					id: self.getId(),
-					name: file.name
+				socket.removeAllListeners('socket.io-file::abort::' + uploadId);
+				socket.removeAllListeners('socket.io-file::error::' + uploadId);
+				socket.removeAllListeners('socket.io-file::complete::' + uploadId);
+
+				// remove from uploadingFiles list
+				delete self.uploadingFiles[uploadId];
+			});
+			socket.on('socket.io-file::abort::' + uploadId, function(info) {
+				fileInfo.aborted = true;
+				self.emit('abort', { 
+					name: fileInfo.name, 
+					size: fileInfo.size, 
+					sent: fileInfo.sent, 
+					wrote: info.wrote,
+					uploadTo: uploadTo 
 				});
-			}
-			else {
-				self.socket.emit('socket.io-file::stream', {
-					id: id,
-					uploadId: uploadId, 
-					name: file.name,
-					data: e.target.result
-				});
-			}
+			});
+			socket.on('socket.io-file::error::' + uploadId, function(err) {
+				self.emit('error', new Error(err.message));
+			});
 		};
+		fileReader.readAsArrayBuffer(file);
+	}
 
-		this.socket.emit('socket.io-file::start', {
-			id: id,
-			uploadId: uploadId,
-			name: file.name,
-			size: this.sendingFiles[uploadId].size,
-			uploadTo: uploadTo,
-			data: uploadData
+	function SocketIOFileClient(socket, options) {
+		if(!socket) {
+			return this.emit('error', new Error('SocketIOFile requires Socket.'));
+		}
+
+		this.instanceId = getInstanceId();		// using for identifying multiple file upload from SocketIOFileClient objects
+		this.uploadId = 0;						// using for identifying each uploading
+		this.ev = {};							// event handlers
+		this.options = options || {};
+		this.accepts = [];
+		this.maxFileSize = undefined;
+		this.socket = socket;
+		this.uploadingFiles = {};
+
+		var self = this;
+
+		socket.once('socket.io-file::recvSync', function(settings) {
+			self.maxFileSize = settings.maxFileSize || undefined;
+			self.accepts = settings.accepts || [];
+			self.chunkSize = settings.chunkSize || 10240;
+			self.transmissionDelay = settings.transmissionDelay || 0;
 		});
+		socket.emit('socket.io-file::reqSync');
+	}
+	SocketIOFileClient.prototype.getUploadId = function() {
+		return 'u_' + this.uploadId++;
+	}
+	SocketIOFileClient.prototype.upload = function(fileEl, options) {
+		if(!fileEl || !fileEl.files || fileEl.files.length <= 0) {
+			return this.emit('error', new Error('No file(s) to upload.'));
+		}
 
-		this.emit('start');
+		var self = this;
+		var uploadIds = [];
 
-		this.socket.on('socket.io-file::' + id + '::' + uploadId + '::stream', function(data) {
-			let id = data.id;
-			let uploadId = data.uploadId;
+		// Is File Element?
+		if(fileEl.files) {
+			var files = fileEl.files;
+			var loaded = 0;
 
-			data.id = id;
-			data.uploadId = uploadId;
-			
-			self.emit('stream', data);
+			for(var i = 0; i < files.length; i++) {
+				var file = files[i];
+				var uploadId = this.getUploadId();
+				uploadIds.push(uploadId);
 
-			if(data.uploaded >= self.sendingFiles[uploadId].size) return;
+				file.uploadId = uploadId;
 
-			var stream = data.stream * CHUNK_SIZE;	// The Next block's starting position
-			var newFile;		// The variable that will hold the new Block of data
-
-			if(self.sendingFiles[uploadId].slice) {
-				newFile = self.sendingFiles[uploadId].slice(stream, stream + Math.min(524288, (self.sendingFiles[uploadId].size - stream)));
+				_upload.call(self, file, options);
 			}
-			else if(self.sendingFiles[uploadIdid].webkitSlice) {
-				newFile = self.sendingFiles[uploadId].webkitSlice(stream, stream + Math.min(524288, (self.sendingFiles[uploadId].size - stream)));
-			}
-			else {
-				newFile = self.sendingFiles[uploadId].mozSlice(stream, stream + Math.min(524288, (self.sendingFiles[uploadId].size - stream)));
-			}
+		}
+		else {
+			self.emit('Argument must be <input type="file" />.');
+			return [];
+		}
 
-			self.fileReaders[uploadId].readAsBinaryString(newFile);
-		});
-		this.socket.on('socket.io-file::' + id + '::' + uploadId + '::complete', function(data) {
-			let id = data.id;
-			let uploadId = data.uploadId;
-
-			self.emit('complete', data);
-			delete self.fileReaders[uploadId];
-			delete self.sendingFiles[uploadId];
-		});
-
-		return uploadId;
+		return uploadIds;
 	};
 	SocketIOFileClient.prototype.on = function(evName, fn) {
 		if(!this.ev[evName]) {
@@ -173,37 +215,25 @@
 		return this;
 	};
 	SocketIOFileClient.prototype.abort = function(id) {
-		// abort all
-		if(!id) {
-			for(var key in this.sendingFiles) {
-				if(this.sendingFiles[key]) {
-					this.socket.emit('socket.io-file::abort', {
-						uploadId: key
-					});
-				}
-			}
-		}
-		else {
-			if(this.sendingFiles[id]) {
-				this.socket.emit('socket.io-file::abort', {
-					uploadId: id
-				});
-			}
-		}
+		var socket = this.socket;
+		socket.emit('socket.io-file::abort::' + id);
 	};
 	SocketIOFileClient.prototype.destroy = function() {
-		this.abort();
-		
-		this.off();	// remove all listeners
-		this.socket.off('socket.io-file::start');
-		this.socket.off('socket.io-file::stream');
-		this.socket.off('socket.io-file::abort');
-		this.socket.off('socket.io-file::complete');
-		this.socket.off('socket.io-file::error');
-		this.fileReaders = [];
-		this.sendingFiles = [];
+		var uploadingFiles = this.uploadingFiles;
+
+		for(var key in uploadingFiles) {
+			this.abort(key);
+		}
+
+		this.socket = null;
+		this.uploadingFiles = null;
+		this.ev = null;
+	};
+	SocketIOFileClient.prototype.getUploadInfo = function() {
+		return JSON.parse(JSON.stringify(this.uploadingFiles));
 	};
 
+	// module export
 	// CommonJS
 	if (typeof exports === "object" && typeof module !== "undefined") {
 		module.exports = SocketIOFileClient;
@@ -212,7 +242,6 @@
 	else if (typeof define === "function" && define.amd) {
 		define(['SocketIOFileClient'], SocketIOFileClient);
 	}
-	// <script>
 	else {
 		var g;
 
@@ -224,12 +253,6 @@
 		}
 		else if (typeof self !== "undefined") {
 			g = self;
-		}
-		else {
-			// works providing we're not in "use strict";
-			// needed for Java 8 Nashorn
-			// see https://github.com/facebook/react/issues/3037
-			g = this;
 		}
 
 		g.SocketIOFileClient = SocketIOFileClient;
