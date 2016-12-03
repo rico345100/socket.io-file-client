@@ -117,7 +117,8 @@ form.onsubmit = function(ev) {
 Create new SocketIOFileClient object.
 
 ### Array SocketIOFileClient.upload(HTMLElement fileEl, Object options)
-Upload file(s). First argument must be <input type="file" />, other wise refuse uploads. If it has multiple files(with multiple attribute), it uploads all at once.
+### Array SocketIOFileClient.upload(FileList files, Object options) (New from 2.0.1)
+Upload file(s). First argument must be <input type="file" /> or FileList object, other wise refuse uploads. If it has multiple files(with multiple attribute), it uploads all at once.
 Returns array that contains upload ids as values.
 Available options are:
 - String to: If server has multiple upload directories, client must be set the directory where to upload.

@@ -146,33 +146,30 @@
 		return 'u_' + this.uploadId++;
 	}
 	SocketIOFileClient.prototype.upload = function(fileEl, options) {
-		if(!fileEl || !fileEl.files || fileEl.files.length <= 0) {
-			return this.emit('error', new Error('No file(s) to upload.'));
+		if(!fileEl ||
+			(fileEl.files && fileEl.files.length <= 0) ||
+			fileEl.length <= 0
+		) {
+			this.emit('error', new Error('No file(s) to upload.'));
+			return [];
 		}
 
 		var self = this;
 		var uploadIds = [];
 
-		// Is File Element?
-		if(fileEl.files) {
-			var files = fileEl.files;
-			var loaded = 0;
+		var files = fileEl.files ? fileEl.files : fileEl;
+		var loaded = 0;
 
-			for(var i = 0; i < files.length; i++) {
-				var file = files[i];
-				var uploadId = this.getUploadId();
-				uploadIds.push(uploadId);
+		for(var i = 0; i < files.length; i++) {
+			var file = files[i];
+			var uploadId = this.getUploadId();
+			uploadIds.push(uploadId);
 
-				file.uploadId = uploadId;
+			file.uploadId = uploadId;
 
-				_upload.call(self, file, options);
-			}
+			_upload.call(self, file, options);
 		}
-		else {
-			self.emit('Argument must be <input type="file" />.');
-			return [];
-		}
-
+		
 		return uploadIds;
 	};
 	SocketIOFileClient.prototype.on = function(evName, fn) {
