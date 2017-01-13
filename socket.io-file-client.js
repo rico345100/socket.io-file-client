@@ -139,6 +139,8 @@
 			self.accepts = settings.accepts || [];
 			self.chunkSize = settings.chunkSize || 10240;
 			self.transmissionDelay = settings.transmissionDelay || 0;
+
+			self.emit('ready');
 		});
 		socket.emit('socket.io-file::reqSync');
 	}

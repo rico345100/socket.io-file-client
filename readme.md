@@ -145,6 +145,10 @@ Get array of currently uploading files. Keys are upload id, values are object th
 ### Events
 SocketIOFile provides these events. Some of property is slight different than servers, like wrote -> sent.
 
+#### ready (ADDED ON 2.0.12)
+Fired on ready to upload files. Everytime you create new SocketIOFileClient object, it receives some upload information from server like chunkSize, mimeType like other things.
+So if you send the file before sync those meta data, your upload won't work properly. Personally, I recommend create single SocketIOFileClient object first, and make upload after ready events fired.
+
 #### start
 Fired on starting file upload. This means server grant your uploading request and create empty file to begin writes. Argument has:
 - String name: Name of the file
