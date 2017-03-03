@@ -165,7 +165,6 @@ Fired on getting chunks from client. Argument has:
 #### complete
 Fired on upload complete. Argument has:
 - String name
-- String uploadDir
 - String mime: MIME type that server recognized.
 - Number size
 - Number wrote
