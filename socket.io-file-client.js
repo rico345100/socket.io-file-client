@@ -59,7 +59,8 @@
 			self.uploadingFiles[uploadId] = fileInfo;
 
 			// request the server to make a file
-			self.emit('start', { 
+			self.emit('start', {
+				uploadId: fileInfo.id,
 				name: fileInfo.name, 
 				size: fileInfo.size,
 				uploadTo: uploadTo 
@@ -78,7 +79,8 @@
 
 				var chunk = buffer.slice(fileInfo.sent, fileInfo.sent + chunkSize);
 
-				self.emit('stream', { 
+				self.emit('stream', {
+					uploadId: fileInfo.id,
 					name: fileInfo.name, 
 					size: fileInfo.size, 
 					sent: fileInfo.sent,
@@ -92,6 +94,7 @@
 			}
 			socket.once('socket.io-file::request::' + uploadId, sendChunk);
 			socket.on('socket.io-file::complete::' + uploadId, function(info) {
+				info.uploadId = uploadId;
 				self.emit('complete', info);
 				
 				socket.removeAllListeners('socket.io-file::abort::' + uploadId);
@@ -103,7 +106,8 @@
 			});
 			socket.on('socket.io-file::abort::' + uploadId, function(info) {
 				fileInfo.aborted = true;
-				self.emit('abort', { 
+				self.emit('abort', {
+					uploadId: fileInfo.id,
 					name: fileInfo.name, 
 					size: fileInfo.size, 
 					sent: fileInfo.sent, 
