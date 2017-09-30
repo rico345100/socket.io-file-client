@@ -44,14 +44,29 @@
 				}
 
 				if(!found) {
-					return self.emit('error', new Error('Not Acceptable file type ' + file.type + ' of ' + file.name + '. Type must be one of these: ' + self.accepts.join(', ')));
+					return self.emit('error', 
+						new Error('Not Acceptable file type ' + file.type + ' of ' + file.name + '. Type must be one of these: ' + self.accepts.join(', ')),
+						{
+							uploadId: fileInfo.id,
+							name: fileInfo.name, 
+							size: fileInfo.size,
+							type: file.type,
+							uploadTo: uploadTo 
+						});
 				}
 			}
 
 			// check file size
 			if(self.maxFileSize && self.maxFileSize > 0) {
 				if(file.size > +self.maxFileSize) {
-					return self.emit('error', new Error('Max Uploading File size must be under ' + self.maxFileSize + ' byte(s).'));
+					return self.emit('error', 
+						new Error('Max Uploading File size must be under ' + self.maxFileSize + ' byte(s).'),
+						{
+							uploadId: fileInfo.id,
+							name: fileInfo.name, 
+							size: fileInfo.size,
+							uploadTo: uploadTo 
+						});
 				}
 			}
 
@@ -94,7 +109,7 @@
 			}
 			socket.once('socket.io-file::request::' + uploadId, sendChunk);
 			socket.on('socket.io-file::complete::' + uploadId, function(info) {
-				info.uploadId = uploadId;
+				info.uploadId = fileInfo.id;
 				self.emit('complete', info);
 				
 				socket.removeAllListeners('socket.io-file::abort::' + uploadId);
@@ -116,11 +131,19 @@
 				});
 			});
 			socket.on('socket.io-file::error::' + uploadId, function(err) {
-				self.emit('error', new Error(err.message));
+				self.emit('error',
+					new Error(err.message),
+					{
+						uploadId: fileInfo.id,
+						name: fileInfo.name, 
+						size: fileInfo.size,
+						uploadTo: uploadTo 
+					});
 			});
 		};
 		fileReader.readAsArrayBuffer(file);
 	}
+
 
 	function SocketIOFileClient(socket, options) {
 		if(!socket) {
@@ -208,11 +231,14 @@
 
 		return this;
 	};
-	SocketIOFileClient.prototype.emit = function(evName, args) {
+	SocketIOFileClient.prototype.emit = function(evName) {
 		var evList = this.ev[evName] || [];
-
+		
+		var args = Array.from(arguments);
+		args.splice(0, 1);			// Don't pass evName to the event handler.
+		
 		for(var i = 0; i < evList.length; i++) {
-			evList[i](args);
+			evList[i].apply(null, args);
 		}
 
 		return this;
