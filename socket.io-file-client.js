@@ -15,12 +15,14 @@
 		var transmissionDelay = this.transmissionDelay;
 		var uploadId = file.uploadId;
 		var uploadTo = options.uploadTo || '';
+		var data = options.data || {};
 		var fileInfo = {
 			id: uploadId,
 			name: file.name,
 			size: file.size,
 			chunkSize: chunkSize,
-			sent: 0
+			sent: 0,
+			data: data
 		};		
 
 		uploadTo && (fileInfo.uploadTo = uploadTo);
@@ -51,7 +53,8 @@
 							name: fileInfo.name, 
 							size: fileInfo.size,
 							type: file.type,
-							uploadTo: uploadTo 
+							uploadTo: uploadTo,
+							data: data
 						});
 				}
 			}
@@ -65,7 +68,8 @@
 							uploadId: fileInfo.id,
 							name: fileInfo.name, 
 							size: fileInfo.size,
-							uploadTo: uploadTo 
+							uploadTo: uploadTo,
+							data: data
 						});
 				}
 			}
@@ -78,7 +82,8 @@
 				uploadId: fileInfo.id,
 				name: fileInfo.name, 
 				size: fileInfo.size,
-				uploadTo: uploadTo 
+				uploadTo: uploadTo,
+				data: data
 			});
 			socket.emit('socket.io-file::createFile', fileInfo);
 
@@ -99,7 +104,8 @@
 					name: fileInfo.name, 
 					size: fileInfo.size, 
 					sent: fileInfo.sent,
-					uploadTo: uploadTo 
+					uploadTo: uploadTo,
+					data: data
 				});
 				socket.once('socket.io-file::request::' + uploadId, sendChunk);
 				socket.emit('socket.io-file::stream::' + uploadId, chunk);
@@ -110,6 +116,7 @@
 			socket.once('socket.io-file::request::' + uploadId, sendChunk);
 			socket.on('socket.io-file::complete::' + uploadId, function(info) {
 				info.uploadId = fileInfo.id;
+				info.data = fileInfo.data;
 				self.emit('complete', info);
 				
 				socket.removeAllListeners('socket.io-file::abort::' + uploadId);
@@ -127,7 +134,8 @@
 					size: fileInfo.size, 
 					sent: fileInfo.sent, 
 					wrote: info.wrote,
-					uploadTo: uploadTo 
+					uploadTo: uploadTo,
+					data: data
 				});
 			});
 			socket.on('socket.io-file::error::' + uploadId, function(err) {
@@ -137,7 +145,8 @@
 						uploadId: fileInfo.id,
 						name: fileInfo.name, 
 						size: fileInfo.size,
-						uploadTo: uploadTo 
+						uploadTo: uploadTo,
+						data: data
 					});
 			});
 		};
