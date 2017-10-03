@@ -73,7 +73,9 @@ form.onsubmit = function(ev) {
 	ev.preventDefault();
 	
 	var fileEl = document.getElementById('file');
-	var uploadIds = uploader.upload(fileEl);
+	var uploadIds = uploader.upload(fileEl, {
+		data: { /* Arbitrary data... */ }
+	});
 };
 ```
 
@@ -122,6 +124,7 @@ Upload file(s). First argument must be <input type="file" /> or FileList object,
 Returns array that contains upload ids as values.
 Available options are:
 - String to: If server has multiple upload directories, client must be set the directory where to upload.
+- Object data: An arbitrary data object that will be passed to the server side events.
 
 ### SocketIOFileClient SocketIOFileClient.on(String evName, function fn)
 Attach event handler to SocketIOFileClient. Possible events are described later part.
@@ -154,6 +157,7 @@ Fired on starting file upload. This means server grant your uploading request an
 - String name: Name of the file
 - Number size: Size of the file(bytes)
 - String uploadTo: Directory that where to writing.
+- Object data: The arbitrary data object that was passed to the upload()-function.
 
 #### stream
 Fired on getting chunks from client. Argument has:
@@ -161,6 +165,7 @@ Fired on getting chunks from client. Argument has:
 - String uploadTo
 - Number size
 - Number sent: Bytes of sent
+- Object data: The arbitrary data object that was passed to the upload()-function.
 
 #### complete
 Fired on upload complete. Argument has:
@@ -169,6 +174,7 @@ Fired on upload complete. Argument has:
 - Number size
 - Number wrote
 - Number estimated: Estimated uploading time as ms.
+- Object data: The arbitrary data object that was passed to the upload()-function.
 
 #### abort
 Fired on abort uploading.
@@ -176,9 +182,18 @@ Fired on abort uploading.
 - String uploadTo
 - Number size
 - Number sent
+- Object data: The arbitrary data object that was passed to the upload()-function.
 
 #### error
-Fired on got an error. Passes Error object. 
+Fired on got an error.
+- First argument: Error object. 
+- Second argument: Object with the following properties:
+-- String uploadId
+-- String name
+-- Number size
+-- String type
+-- String uploadTo
+-- Object data: The arbitrary data object that was passed to the upload()-function.
 
 
 ## Browser Supports
