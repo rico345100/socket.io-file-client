@@ -152,6 +152,14 @@ SocketIOFile provides these events. Some of property is slight different than se
 Fired on ready to upload files. Everytime you create new SocketIOFileClient object, it receives some upload information from server like chunkSize, mimeType like other things.
 So if you send the file before sync those meta data, your upload won't work properly. Personally, I recommend create single SocketIOFileClient object first, and make upload after ready events fired.
 
+### loadstart (ADDED ON 2.0.13)
+Fired right before load the file from browser. After browser load the file you selected, it will start uploading and trigger "start" event.
+
+### progress (ADDED ON 2.0.13)
+Keep firing while browser load your file. This will help to implement loading system that how much data loaded before send.
+- Number loaded: Bytes of loaded
+- Number total: Total byts of file
+
 #### start
 Fired on starting file upload. This means server grant your uploading request and create empty file to begin writes. Argument has:
 - String name: Name of the file
@@ -186,14 +194,19 @@ Fired on abort uploading.
 
 #### error
 Fired on got an error.
-- First argument: Error object. 
-- Second argument: Object with the following properties:
--- String uploadId
--- String name
--- Number size
--- String type
--- String uploadTo
--- Object data: The arbitrary data object that was passed to the upload()-function.
+- First argument: Error object.
+- Second argument: Object with the following properties: 
+	- String uploadId 
+	- String name 
+	- Number size
+	- String type
+	- String uploadTo
+	- Object data: The arbitrary data object that was passed to the upload()-function.
+
+
+## FAQ
+### Upload 0 bytes
+Try to upload after "ready" event fired.
 
 
 ## Browser Supports

@@ -5,6 +5,7 @@
 	function getInstanceId() {
 		return instanceId++;
 	}
+
 	// note that this function invoked from call/apply, which has "this" binded	
 	function _upload(file, options) {
 		options = options || {};
@@ -29,6 +30,18 @@
 
 		// read file
 		var fileReader = new FileReader();
+
+		fileReader.onloadstart = function() {
+			self.emit('loadstart');
+		};
+
+		fileReader.onprogress = function(progress) {
+			self.emit('progress', {
+				loaded: progress.loaded,
+				total: progress.total
+			});
+		};
+
 		fileReader.onloadend = function() {
 			var buffer = fileReader.result;
 
@@ -55,7 +68,8 @@
 							type: file.type,
 							uploadTo: uploadTo,
 							data: data
-						});
+						 }
+					);
 				}
 			}
 
@@ -64,13 +78,14 @@
 				if(file.size > +self.maxFileSize) {
 					return self.emit('error', 
 						new Error('Max Uploading File size must be under ' + self.maxFileSize + ' byte(s).'),
-						{
-							uploadId: fileInfo.id,
-							name: fileInfo.name, 
-							size: fileInfo.size,
-							uploadTo: uploadTo,
-							data: data
-						});
+							{
+								uploadId: fileInfo.id,
+								name: fileInfo.name, 
+								size: fileInfo.size,
+								uploadTo: uploadTo,
+								data: data
+							}
+						);
 				}
 			}
 
@@ -78,7 +93,7 @@
 			self.uploadingFiles[uploadId] = fileInfo;
 
 			// request the server to make a file
-			self.emit('start', {
+			self.emit('start', { 
 				uploadId: fileInfo.id,
 				name: fileInfo.name, 
 				size: fileInfo.size,
@@ -99,7 +114,7 @@
 
 				var chunk = buffer.slice(fileInfo.sent, fileInfo.sent + chunkSize);
 
-				self.emit('stream', {
+				self.emit('stream', { 
 					uploadId: fileInfo.id,
 					name: fileInfo.name, 
 					size: fileInfo.size, 
@@ -117,6 +132,7 @@
 			socket.on('socket.io-file::complete::' + uploadId, function(info) {
 				info.uploadId = fileInfo.id;
 				info.data = fileInfo.data;
+
 				self.emit('complete', info);
 				
 				socket.removeAllListeners('socket.io-file::abort::' + uploadId);
@@ -128,7 +144,7 @@
 			});
 			socket.on('socket.io-file::abort::' + uploadId, function(info) {
 				fileInfo.aborted = true;
-				self.emit('abort', {
+				self.emit('abort', { 
 					uploadId: fileInfo.id,
 					name: fileInfo.name, 
 					size: fileInfo.size, 
@@ -139,7 +155,7 @@
 				});
 			});
 			socket.on('socket.io-file::error::' + uploadId, function(err) {
-				self.emit('error',
+				self.emit('error', 
 					new Error(err.message),
 					{
 						uploadId: fileInfo.id,
@@ -147,12 +163,12 @@
 						size: fileInfo.size,
 						uploadTo: uploadTo,
 						data: data
-					});
+					}
+				);
 			});
 		};
 		fileReader.readAsArrayBuffer(file);
 	}
-
 
 	function SocketIOFileClient(socket, options) {
 		if(!socket) {
@@ -170,7 +186,7 @@
 
 		var self = this;
 
-		socket.once('socket.io-file::recvSync', function(settings) {
+		socket.on('socket.io-file::recvSync', function(settings) {
 			self.maxFileSize = settings.maxFileSize || undefined;
 			self.accepts = settings.accepts || [];
 			self.chunkSize = settings.chunkSize || 10240;
@@ -242,10 +258,9 @@
 	};
 	SocketIOFileClient.prototype.emit = function(evName) {
 		var evList = this.ev[evName] || [];
-		
 		var args = Array.from(arguments);
 		args.splice(0, 1);			// Don't pass evName to the event handler.
-		
+
 		for(var i = 0; i < evList.length; i++) {
 			evList[i].apply(null, args);
 		}
