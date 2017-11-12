@@ -24,7 +24,7 @@
 			chunkSize: chunkSize,
 			sent: 0,
 			data: data
-		};		
+		};
 
 		uploadTo && (fileInfo.uploadTo = uploadTo);
 
@@ -132,8 +132,6 @@
 			socket.on('socket.io-file::complete::' + uploadId, function(info) {
 				info.uploadId = fileInfo.id;
 				info.data = fileInfo.data;
-
-				self.emit('complete', info);
 				
 				socket.removeAllListeners('socket.io-file::abort::' + uploadId);
 				socket.removeAllListeners('socket.io-file::error::' + uploadId);
@@ -141,6 +139,8 @@
 
 				// remove from uploadingFiles list
 				delete self.uploadingFiles[uploadId];
+
+				self.emit('complete', info);
 			});
 			socket.on('socket.io-file::abort::' + uploadId, function(info) {
 				fileInfo.aborted = true;
@@ -183,6 +183,7 @@
 		this.maxFileSize = undefined;
 		this.socket = socket;
 		this.uploadingFiles = {};
+		this.isDestroyed = false;
 
 		var self = this;
 
@@ -195,11 +196,20 @@
 			self.emit('ready');
 		});
 		socket.emit('socket.io-file::reqSync');
+
+		socket.on('socket.io-file::disconnectByServer', function() {
+			self.emit('disconnected');
+			self.destroy();
+		});
 	}
 	SocketIOFileClient.prototype.getUploadId = function() {
 		return 'u_' + this.uploadId++;
 	}
 	SocketIOFileClient.prototype.upload = function(fileEl, options) {
+		if(this.isDestroyed) {
+			throw new Error('SocketIOFileClient is closed.');
+		}
+
 		if(!fileEl ||
 			(fileEl.files && fileEl.files.length <= 0) ||
 			fileEl.length <= 0
@@ -227,6 +237,10 @@
 		return uploadIds;
 	};
 	SocketIOFileClient.prototype.on = function(evName, fn) {
+		if(this.isDestroyed) {
+			throw new Error('SocketIOFileClient is closed.');
+		}
+
 		if(!this.ev[evName]) {
 			this.ev[evName] = [];
 		}
@@ -235,6 +249,10 @@
 		return this;
 	};
 	SocketIOFileClient.prototype.off = function(evName, fn) {
+		if(this.isDestroyed) {
+			throw new Error('SocketIOFileClient is closed.');
+		}
+
 		if(typeof evName === 'undefined') {
 			this.ev = [];
 		}
@@ -257,7 +275,12 @@
 		return this;
 	};
 	SocketIOFileClient.prototype.emit = function(evName) {
+		if(this.isDestroyed) {
+			throw new Error('SocketIOFileClient is closed.');
+		}
+
 		var evList = this.ev[evName] || [];
+
 		var args = Array.from(arguments);
 		args.splice(0, 1);			// Don't pass evName to the event handler.
 
@@ -268,10 +291,18 @@
 		return this;
 	};
 	SocketIOFileClient.prototype.abort = function(id) {
+		if(this.isDestroyed) {
+			throw new Error('SocketIOFileClient is closed.');
+		}
+
 		var socket = this.socket;
 		socket.emit('socket.io-file::abort::' + id);
 	};
 	SocketIOFileClient.prototype.destroy = function() {
+		if(this.isDestroyed) {
+			throw new Error('SocketIOFileClient is closed.');
+		}
+
 		var uploadingFiles = this.uploadingFiles;
 
 		for(var key in uploadingFiles) {
@@ -281,6 +312,7 @@
 		this.socket = null;
 		this.uploadingFiles = null;
 		this.ev = null;
+		this.isDestroyed = true;
 	};
 	SocketIOFileClient.prototype.getUploadInfo = function() {
 		return JSON.parse(JSON.stringify(this.uploadingFiles));

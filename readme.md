@@ -144,6 +144,9 @@ Destroy all resources about SocketIOFileClient. Use this method for saving more 
 ### void SocketIOFileClient.getUploadInfo(void) 
 Get array of currently uploading files. Keys are upload id, values are object that contains information of uploading files.
 
+### bool SocketIOFileClient.isDestroyed (ADDED 2.0.2)
+Returns true after destroyed by calling destroy method or server force to close.
+
 
 ### Events
 SocketIOFile provides these events. Some of property is slight different than servers, like wrote -> sent.
@@ -151,6 +154,10 @@ SocketIOFile provides these events. Some of property is slight different than se
 #### ready (ADDED ON 2.0.12)
 Fired on ready to upload files. Everytime you create new SocketIOFileClient object, it receives some upload information from server like chunkSize, mimeType like other things.
 So if you send the file before sync those meta data, your upload won't work properly. Personally, I recommend create single SocketIOFileClient object first, and make upload after ready events fired.
+
+
+#### disconnected (ADDED ON 2.0.2)
+Fired when server forcely send disconnect order. After it fires, you can't send file via socket.io-file.
 
 ### loadstart (ADDED ON 2.0.13)
 Fired right before load the file from browser. After browser load the file you selected, it will start uploading and trigger "start" event.
