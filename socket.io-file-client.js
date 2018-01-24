@@ -6,7 +6,7 @@
 		return instanceId++;
 	}
 
-	// note that this function invoked from call/apply, which has "this" binded	
+	// note that this function invoked from call/apply, which has "this" binded
 	function _upload(file, options) {
 		options = options || {};
 
@@ -59,11 +59,11 @@
 				}
 
 				if(!found) {
-					return self.emit('error', 
+					return self.emit('error',
 						new Error('Not Acceptable file type ' + file.type + ' of ' + file.name + '. Type must be one of these: ' + self.accepts.join(', ')),
 						{
 							uploadId: fileInfo.id,
-							name: fileInfo.name, 
+							name: fileInfo.name,
 							size: fileInfo.size,
 							type: file.type,
 							uploadTo: uploadTo,
@@ -76,11 +76,11 @@
 			// check file size
 			if(self.maxFileSize && self.maxFileSize > 0) {
 				if(file.size > +self.maxFileSize) {
-					return self.emit('error', 
+					return self.emit('error',
 						new Error('Max Uploading File size must be under ' + self.maxFileSize + ' byte(s).'),
 							{
 								uploadId: fileInfo.id,
-								name: fileInfo.name, 
+								name: fileInfo.name,
 								size: fileInfo.size,
 								uploadTo: uploadTo,
 								data: data
@@ -93,9 +93,9 @@
 			self.uploadingFiles[uploadId] = fileInfo;
 
 			// request the server to make a file
-			self.emit('start', { 
+			self.emit('start', {
 				uploadId: fileInfo.id,
-				name: fileInfo.name, 
+				name: fileInfo.name,
 				size: fileInfo.size,
 				uploadTo: uploadTo,
 				data: data
@@ -114,10 +114,10 @@
 
 				var chunk = buffer.slice(fileInfo.sent, fileInfo.sent + chunkSize);
 
-				self.emit('stream', { 
+				self.emit('stream', {
 					uploadId: fileInfo.id,
-					name: fileInfo.name, 
-					size: fileInfo.size, 
+					name: fileInfo.name,
+					size: fileInfo.size,
 					sent: fileInfo.sent,
 					uploadTo: uploadTo,
 					data: data
@@ -128,11 +128,16 @@
 				fileInfo.sent += chunk.byteLength;
 				self.uploadingFiles[uploadId] = fileInfo;
 			}
+
+
+			socket.once('socket.io-file::resume::' + uploadId, function(info){
+			    fileInfo.sent = info.wrote;
+            });
 			socket.once('socket.io-file::request::' + uploadId, sendChunk);
 			socket.on('socket.io-file::complete::' + uploadId, function(info) {
 				info.uploadId = fileInfo.id;
 				info.data = fileInfo.data;
-				
+
 				socket.removeAllListeners('socket.io-file::abort::' + uploadId);
 				socket.removeAllListeners('socket.io-file::error::' + uploadId);
 				socket.removeAllListeners('socket.io-file::complete::' + uploadId);
@@ -144,22 +149,22 @@
 			});
 			socket.on('socket.io-file::abort::' + uploadId, function(info) {
 				fileInfo.aborted = true;
-				self.emit('abort', { 
+				self.emit('abort', {
 					uploadId: fileInfo.id,
-					name: fileInfo.name, 
-					size: fileInfo.size, 
-					sent: fileInfo.sent, 
+					name: fileInfo.name,
+					size: fileInfo.size,
+					sent: fileInfo.sent,
 					wrote: info.wrote,
 					uploadTo: uploadTo,
 					data: data
 				});
 			});
 			socket.on('socket.io-file::error::' + uploadId, function(err) {
-				self.emit('error', 
+				self.emit('error',
 					new Error(err.message),
 					{
 						uploadId: fileInfo.id,
-						name: fileInfo.name, 
+						name: fileInfo.name,
 						size: fileInfo.size,
 						uploadTo: uploadTo,
 						data: data
@@ -233,7 +238,7 @@
 
 			_upload.call(self, file, options);
 		}
-		
+
 		return uploadIds;
 	};
 	SocketIOFileClient.prototype.on = function(evName, fn) {
@@ -258,7 +263,7 @@
 		}
 		else if(typeof fn === 'undefined') {
 			if(this.ev[evName]) {
-				delete this.ev[evName]; 
+				delete this.ev[evName];
 			}
 		}
 		else {
