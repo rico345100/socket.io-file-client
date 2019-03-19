@@ -1,9 +1,16 @@
 {
   "name": "socket.io-file-client",
-  "version": "2.0.2",
+  "version": "3.0.0",
   "description": "Client module for Socket.io-file",
   "main": "socket.io-file-client.js",
   "scripts": {
+    "start": "npm run build-prod;npm run serve",
+    "build": "babel ./src -d ./build --copy-files",
+    "build-dev": "NODE_ENV=development npm run build",
+    "build-prod": "NODE_ENV=production npm run build",
+    "serve": "node ./build/index.js",
+    "flow": "flow",
+    "dev": "npm run flow;babel ./src -d ./build --copy-files --watch",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
@@ -16,8 +23,14 @@
     "binary",
     "arraybuffer",
     "file",
-    "upload"
+    "upload",
+    "node.js"
   ],
   "author": ".modernator",
-  "license": "MIT"
+  "license": "MIT",
+  "devDependencies": {
+    "@babel/cli": "^7.2.3",
+    "@babel/core": "^7.3.4",
+    "@babel/preset-flow": "^7.0.0"
+  }
 }
