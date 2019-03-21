@@ -4,14 +4,8 @@
   "description": "Client module for Socket.io-file",
   "main": "socket.io-file-client.js",
   "scripts": {
-    "start": "npm run build-prod;npm run serve",
-    "build": "babel ./src -d ./build --copy-files",
-    "build-dev": "NODE_ENV=development npm run build",
-    "build-prod": "NODE_ENV=production npm run build",
-    "serve": "node ./build/index.js",
-    "flow": "flow",
-    "dev": "npm run flow;babel ./src -d ./build --copy-files --watch",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "build": "rollup --config",
+    "test": "jest"
   },
   "repository": {
     "type": "git",
@@ -31,6 +25,11 @@
   "devDependencies": {
     "@babel/cli": "^7.2.3",
     "@babel/core": "^7.3.4",
-    "@babel/preset-flow": "^7.0.0"
+    "@babel/preset-env": "^7.4.2",
+    "@babel/preset-flow": "^7.0.0",
+    "flow-bin": "^0.95.1",
+    "jest": "^24.5.0",
+    "rollup": "^1.7.0",
+    "rollup-plugin-babel": "^4.3.2"
   }
 }
