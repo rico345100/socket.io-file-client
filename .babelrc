@@ -1,12 +1,12 @@
 {
     "presets": [
-        "@babel/preset-flow",
         ["@babel/preset-env", {
             "modules": false,
             "targets": {
                 "browsers": "ie >= 11"
             }
-        }]
+        }],
+        "@babel/preset-flow"
     ],
     "env": {
         "test": {
@@ -14,5 +14,9 @@
                 ["@babel/preset-env"]
             ]
         }
-    }
+    },
+    "ignore": [
+        "**/*.test.js",
+        "src/types.js"
+    ]
 }

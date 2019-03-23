@@ -2,10 +2,11 @@
   "name": "socket.io-file-client",
   "version": "3.0.0",
   "description": "Client module for Socket.io-file",
-  "main": "socket.io-file-client.js",
+  "main": "build/bundle.js",
   "scripts": {
     "build": "rollup --config",
-    "test": "jest"
+    "test": "jest",
+    "flow": "flow"
   },
   "repository": {
     "type": "git",
