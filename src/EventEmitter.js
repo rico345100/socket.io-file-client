@@ -53,10 +53,9 @@ class EventEmitter {
 	 */
 	emit(evName: string) {
 		const evList = this.listeners[evName];
-
 		const args = Array.from(arguments);
 		args.splice(0, 1);	// Remove first paramter
-
+		
 		for(let i = 0; i < evList.length; i++ ){
 			evList[i].apply(null, args);
 		}

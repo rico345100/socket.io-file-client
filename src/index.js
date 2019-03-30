@@ -13,12 +13,17 @@ class SocketIOFileClient {
 		this.socket = socket;
 		this.eventEmitter = new EventEmitter();
 		this.evPrefix = 'socket.io-file';
-
+		
 		this.socket.emit(`${this.evPrefix}::sync_upload_settings`);
 		this.socket.once(`${this.evPrefix}::sync_upload_settings`, (uploadSettings) => {
 			this.uploadSettings = uploadSettings;
 			this.emit('ready');
 		});
+		this.socket.on(`${this.evPrefix}::error`, this.handleError);
+	}
+
+	handleError(errMessage: string) {
+		this.emit('error', new Error(errMessage));
 	}
 
 	// TODO: Finish Implement Upload
@@ -42,10 +47,26 @@ class SocketIOFileClient {
 		if(!targetFile) {
 			throw new Error('No file(s) to upload.');
 		}
-		// TODO: Check "Accept" mime types
-		// else if(targetFile.type !== )
 
-		// TODO: Do Error Handling and release resources on caught error
+		// Check type is acceptable
+		const { uploadSettings } = this;
+
+		if(uploadSettings.accepts) {
+			const { accepts } = uploadSettings;
+			let isAcceptable = false;
+
+			for(let i = 0; i < accepts.length; i++) {
+				if(targetFile.type === accepts[i]) {
+					isAcceptable = true;
+					break;
+				}
+			}
+
+			if(!isAcceptable) {
+				throw new Error(`${targetFile.type} is not acceptable type.`);
+			}
+		}
+
 		const uploadId = await this.getUploadIdFromServer();
 		await this.requestServerToCreateFile(uploadId, targetFile);
 
@@ -57,6 +78,7 @@ class SocketIOFileClient {
 	 */
 	getUploadIdFromServer(): Promise<number> {
 		return new Promise((resolve) => {
+			
 			this.socket.emit(`${this.evPrefix}::request_upload_id`);
 			this.socket.once(`${this.evPrefix}::request_upload_id`, async (uploadId: number) => {
 				resolve(uploadId);
