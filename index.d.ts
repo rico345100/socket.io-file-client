@@ -15,7 +15,7 @@ export type SocketIOFileClientEvents = 'ready' | 'disconnected' | 'loadstart' | 
 
 export class SocketIOFileClient {
     constructor(socket: Socket, options?: any);
-    upload(files: FileList, options?: {to: string, data: any}): string[];
+    upload(files: FileList, options?: {uploadTo: string, data: any}): string[];
     on(evName: SocketIOFileClientEvents, fn?: (fileinfo: SocketIOFileClientFileinfo) => void);
     off(evName: SocketIOFileClientEvents, fn?: (fileinfo: SocketIOFileClientFileinfo) => void);
     emit(evName: SocketIOFileClientEvents, args?: any);
