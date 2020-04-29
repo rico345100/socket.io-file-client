@@ -18,6 +18,11 @@ Even you can configure the size of each transmission(chunk) any value you want, 
 - Checking mime, limit file size
 - Multiple file uploads
 
+## Install
+
+```
+npm install socket.io-file-client --save
+```
 
 ## Examples
 You can found full source code here: [Example Page](https://github.com/rico345100/socket.io-file-example)
