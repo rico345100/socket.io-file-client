@@ -18,6 +18,11 @@ Even you can configure the size of each transmission(chunk) any value you want, 
 - Checking mime, limit file size
 - Multiple file uploads
 
+## Install
+
+```
+ npm install socket.io-file-client --save
+```
 
 ## Examples
 You can found full source code here: [Example Page](https://github.com/rico345100/socket.io-file-example)
@@ -84,7 +89,16 @@ Also Socket.io-file-client supports UMD, you can load from CommonJS require() or
 ```javascript
 import SocketIO from 'socket.io-client';
 import SocketIOFileClient from 'socket.io-file-client';
+```
 
+TypeScript is also supported with typings:
+
+```typescript
+import * as SocketIO from 'socket.io-client';
+import { SocketIOFileClient } from 'socket.io-file-client';
+```
+
+```javascript
 var socket = SocketIO('http://localhost:3000');
 var uploader = new SocketIOFileClient(socket);
 var form = document.getElementById('form');
